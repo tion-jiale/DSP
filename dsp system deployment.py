@@ -16,10 +16,10 @@ if "assigned_tech" not in st.session_state:
     st.session_state.assigned_tech = None
 
 # ---------------- TITLE ----------------
-st.title("⛽ Petrol Station Issue → Auto Technician Assignment")
+st.title(" Petrol Station Issue → Auto Technician Assignment")
 
 # ---------------- AUTO STATION LOCATION ----------------
-st.subheader("📍 Detecting Petrol Station Location")
+st.subheader("Issue Location")
 
 location = streamlit_geolocation()
 
@@ -45,7 +45,7 @@ if st.sidebar.button("Submit Issue"):
 
 # ---------------- TECHNICIAN DATABASE ----------------
 technicians = pd.DataFrame({
-    "name": ["Ravi", "Kumar", "Amit", "Suresh"],
+    "ID": ["C001", "S012", "D003", "R010"],
     "lat": [12.9750, 12.9650, 12.9800, 12.9600],
     "lon": [77.6000, 77.5900, 77.6100, 77.5850],
     "status": ["Available", "Available", "Busy", "Available"]
@@ -78,18 +78,18 @@ if st.session_state.assigned_tech is not None:
     col1, col2 = st.columns(2)
 
     with col1:
-        st.subheader("📍 Station Details")
+        st.subheader(" Station Details")
         st.write(f"**Name:** {station_name}")
         st.write(f"**Issue:** {problem}")
 
     with col2:
-        st.subheader("👨‍🔧 Assigned Technician")
-        st.write(f"**Name:** {tech['name']}")
+        st.subheader(" Assigned Technician")
+        st.write(f"**ID:** {tech['ID']}")
         st.write(f"**Distance:** {tech['distance_km']:.2f} km")
         st.write("**Status:** On the way")
 
     # ---------------- MAP ----------------
-    st.subheader("🗺 Technician Assignment Map")
+    st.subheader(" Technician Location")
 
     m = folium.Map(location=[station_lat, station_lon], zoom_start=13)
 
@@ -101,7 +101,7 @@ if st.session_state.assigned_tech is not None:
 
     folium.Marker(
         [tech["lat"], tech["lon"]],
-        popup=f"Technician: {tech['name']}",
+        popup=f"Technician: {tech['ID']}",
         icon=folium.Icon(color="green", icon="wrench")
     ).add_to(m)
 
