@@ -5,8 +5,17 @@ from streamlit_folium import st_folium
 from streamlit_geolocation import streamlit_geolocation
 from geopy.distance import geodesic
 
-# ---------------- PAGE CONFIG ----------------
+# ---------------- PAGE CONFIG (MUST BE FIRST) ----------------
 st.set_page_config(page_title="Technician Auto Assignment", layout="wide")
+
+# ---------------- SESSION STATE ----------------
+if "submitted" not in st.session_state:
+    st.session_state.submitted = False
+
+if "assigned_tech" not in st.session_state:
+    st.session_state.assigned_tech = None
+
+# ---------------- TITLE ----------------
 st.title("⛽ Petrol Station Issue → Auto Technician Assignment")
 
 # ---------------- AUTO STATION LOCATION ----------------
@@ -22,15 +31,19 @@ else:
     station_lat, station_lon = 12.9716, 77.5946
     st.warning("Using default location")
 
+st.write(f"Latitude: {station_lat}")
+st.write(f"Longitude: {station_lon}")
+
 # ---------------- STATION INPUT ----------------
 st.sidebar.header("Report Technical Issue")
 
 station_name = st.sidebar.text_input("Petrol Station Name")
 problem = st.sidebar.text_area("Technical Problem")
 
-submit = st.sidebar.button("Submit Issue")
+if st.sidebar.button("Submit Issue"):
+    st.session_state.submitted = True
 
-# ---------------- TECHNICIAN DATABASE (Sample) ----------------
+# ---------------- TECHNICIAN DATABASE ----------------
 technicians = pd.DataFrame({
     "name": ["Ravi", "Kumar", "Amit", "Suresh"],
     "lat": [12.9750, 12.9650, 12.9800, 12.9600],
@@ -39,16 +52,12 @@ technicians = pd.DataFrame({
 })
 
 # ---------------- ASSIGN TECHNICIAN ----------------
-if submit:
+if st.session_state.submitted:
+
     st.success("Issue submitted")
 
     available_techs = technicians[technicians["status"] == "Available"].copy()
 
-    if available_techs.empty:
-        st.error("No technicians available")
-        st.stop()
-
-    # Calculate distance
     available_techs["distance_km"] = available_techs.apply(
         lambda row: geodesic(
             (station_lat, station_lon),
@@ -57,21 +66,26 @@ if submit:
         axis=1
     )
 
-    assigned_tech = available_techs.sort_values("distance_km").iloc[0]
+    st.session_state.assigned_tech = (
+        available_techs.sort_values("distance_km").iloc[0]
+    )
 
-    # ---------------- DISPLAY ----------------
+# ---------------- DISPLAY RESULT ----------------
+if st.session_state.assigned_tech is not None:
+
+    tech = st.session_state.assigned_tech
+
     col1, col2 = st.columns(2)
 
     with col1:
         st.subheader("📍 Station Details")
         st.write(f"**Name:** {station_name}")
         st.write(f"**Issue:** {problem}")
-        st.write(f"**Location:** {station_lat}, {station_lon}")
 
     with col2:
         st.subheader("👨‍🔧 Assigned Technician")
-        st.write(f"**Name:** {assigned_tech['name']}")
-        st.write(f"**Distance:** {assigned_tech['distance_km']:.2f} km")
+        st.write(f"**Name:** {tech['name']}")
+        st.write(f"**Distance:** {tech['distance_km']:.2f} km")
         st.write("**Status:** On the way")
 
     # ---------------- MAP ----------------
@@ -79,26 +93,20 @@ if submit:
 
     m = folium.Map(location=[station_lat, station_lon], zoom_start=13)
 
-    # Station Marker
     folium.Marker(
         [station_lat, station_lon],
         popup="Petrol Station",
-        icon=folium.Icon(color="red", icon="info-sign")
+        icon=folium.Icon(color="red")
     ).add_to(m)
 
-    # Technician Marker
     folium.Marker(
-        [assigned_tech["lat"], assigned_tech["lon"]],
-        popup=f"Technician: {assigned_tech['name']}",
+        [tech["lat"], tech["lon"]],
+        popup=f"Technician: {tech['name']}",
         icon=folium.Icon(color="green", icon="wrench")
     ).add_to(m)
 
-    # Route
     folium.PolyLine(
-        locations=[
-            [assigned_tech["lat"], assigned_tech["lon"]],
-            [station_lat, station_lon]
-        ],
+        locations=[[tech["lat"], tech["lon"]], [station_lat, station_lon]],
         color="blue"
     ).add_to(m)
 
@@ -106,3 +114,10 @@ if submit:
 
 else:
     st.info("Submit an issue to auto-assign a technician.")
+
+# ---------------- RESET ----------------
+if st.sidebar.button("Reset"):
+    st.session_state.submitted = False
+    st.session_state.assigned_tech = None
+
+
